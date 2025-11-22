@@ -1,5 +1,5 @@
 /* eslint-disable no-underscore-dangle */
-const ThreadData = require('../../Domains/threads/entities/ThreadData');
+const NewThread = require('../../Domains/threads/entities/NewThread');
 
 class AddThreadUseCase {
     constructor({ threadRepository }) {
@@ -7,7 +7,7 @@ class AddThreadUseCase {
     }
 
     async execute(useCasePayload) {
-        const threadData = new ThreadData(useCasePayload);
+        const threadData = new NewThread(useCasePayload);
         const addedThread = await this._threadRepository.addThread(threadData);
         return addedThread;
     }

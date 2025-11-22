@@ -1,4 +1,3 @@
-/* eslint-disable no-underscore-dangle */
 const NotFoundError = require('../../Commons/exceptions/NotFoundError');
 const ThreadData = require('../../Domains/threads/entities/ThreadData');
 const ThreadDetail = require('../../Domains/threads/entities/ThreadDetail');
@@ -19,14 +18,18 @@ class ThreadRepositoryPostgres extends ThreadRepository {
             values: [id, title, body, owner],
         };
         const result = await this._pool.query(query);
-        // mapping db ke model
-        return new ThreadData({
-            id: result.rows[0].id,
-            title: result.rows[0].title,
-            date: result.rows[0].date,
-            owner: result.rows[0].owner,
-            body: result.rows[0].body,
-        });
+        return new ThreadData({ ...result.rows[0] });
+    }
+
+    async verifyThreadExist(threadId) {
+        const query = {
+            text: 'SELECT id FROM threads where id = $1',
+            values: [threadId],
+        };
+        const result = await this._pool.query(query);
+        if (!result.rows.length) {
+            throw new NotFoundError('thread tidak ditemukan');
+        }
     }
 
     async getThreadById(threadId) {
@@ -35,17 +38,8 @@ class ThreadRepositoryPostgres extends ThreadRepository {
             values: [threadId],
         };
         const result = await this._pool.query(query);
-        if (!result.rows.length) {
-            throw new NotFoundError('thread tidak ditemukan');
-        }
-        return new ThreadDetail({
-            id: result.rows[0].id,
-            title: result.rows[0].title,
-            date: result.rows[0].date,
-            username: result.rows[0].username,
-            body: result.rows[0].body,
-            comments: result.rows[0].comments,
-        });
+        // pindah logic mapping ke use case getDetail
+        return new ThreadDetail({ ...result.rows[0] });
     }
 }
 

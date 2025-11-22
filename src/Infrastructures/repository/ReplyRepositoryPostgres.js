@@ -11,15 +11,6 @@ class ReplyRepositoryPostgres extends ReplyRepository {
 
     async addReply(replyData) {
         const { content, owner, commentId } = replyData;
-        // cek comment
-        const checkQuery = {
-            text: 'SELECT id FROM comments WHERE id = $1',
-            values: [commentId],
-        };
-        const checkResult = await this._pool.query(checkQuery);
-        if (!checkResult.rows.length) {
-            throw new NotFoundError('thread tidak ditemukan');
-        }
         const id = `reply-${this._idGenerator()}`;
         const query = {
             text: 'INSERT INTO replies (id, comment_id, content, owner) VALUES ($1, $2, $3, $4) RETURNING *',
@@ -27,6 +18,17 @@ class ReplyRepositoryPostgres extends ReplyRepository {
         };
         const result = await this._pool.query(query);
         return new ReplyData({ ...result.rows[0] });
+    }
+
+    async verifyReplyExist(replyId) {
+        const checkQuery = {
+            text: 'SELECT id FROM replies WHERE id = $1',
+            values: [replyId],
+        };
+        const checkResult = await this._pool.query(checkQuery);
+        if (!checkResult.rows.length) {
+            throw new NotFoundError('Reply tidak ditemukan');
+        }
     }
 
     async getReplyById(replyId) {
@@ -47,23 +49,11 @@ class ReplyRepositoryPostgres extends ReplyRepository {
             values: [commentId],
         };
         const result = await this._pool.query(query);
-        return result.rows.map((r) => ({
-            id: r.id,
-            username: r.username,
-            content: r.is_delete ? '**balasan telah dihapus**' : r.content,
-            date: r.date,
-        }));
+        // pindah mapping ke use case juga
+        return result.rows;
     }
 
     async deleteReply(replyId) {
-        const checkQuery = {
-            text: 'SELECT id FROM replies WHERE id = $1',
-            values: [replyId],
-        };
-        const checkResult = await this._pool.query(checkQuery);
-        if (!checkResult.rows.length) {
-            throw new NotFoundError('Reply tidak ditemukan');
-        }
         const query = {
             text: 'UPDATE replies SET is_delete = true WHERE id = $1',
             values: [replyId],

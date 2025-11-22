@@ -1,5 +1,4 @@
-/* eslint-disable no-underscore-dangle */
-const CommentData = require('../../Domains/comments/entities/CommentData');
+const NewComment = require('../../Domains/comments/entities/NewComment');
 
 class AddCommentUseCase {
     constructor({ commentRepository, threadRepository }) {
@@ -9,8 +8,9 @@ class AddCommentUseCase {
 
     async execute(useCasePayload) {
         const { threadId } = useCasePayload;
-        await this._threadRepository.getThreadById(threadId);
-        const commentData = new CommentData(useCasePayload);
+        await this._threadRepository.verifyThreadExist(threadId);
+        // pisahkan model newcomment sama commentdata
+        const commentData = new NewComment(useCasePayload);
         const addedComment = await this._commentRepository.addComment(commentData);
         return addedComment;
     }
