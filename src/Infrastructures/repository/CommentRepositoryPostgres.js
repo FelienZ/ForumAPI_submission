@@ -1,3 +1,4 @@
+const AuthorizationError = require('../../Commons/exceptions/AuthorizationError');
 const NotFoundError = require('../../Commons/exceptions/NotFoundError');
 const CommentRepository = require('../../Domains/comments/CommentRepository');
 const CommentData = require('../../Domains/comments/entities/CommentData');
@@ -20,14 +21,26 @@ class CommentRepositoryPostgres extends CommentRepository {
         return new CommentData({ ...result.rows[0] });
     }
 
-    async verifyCommentExist(commentId) {
+    // ubah validasi dari via getById menjadi verifyOwner
+    async verifyCommentOwner(commentId, userId) {
         const query = {
-            text: 'SELECT id FROM comments WHERE id = $1',
-            values: [commentId],
+            text: 'SELECT id FROM comments where id = $1 AND owner = $2',
+            values: [commentId, userId],
         };
         const result = await this._pool.query(query);
         if (!result.rows.length) {
-            throw new NotFoundError('Comment Tidak tersedia');
+            throw new AuthorizationError('Tidak Berhak Melakukan aksi ini');
+        }
+    }
+
+    async verifyCommentExist(threadId, commentId) {
+        const query = {
+            text: 'SELECT id FROM comments WHERE id = $1 AND thread_id = $2',
+            values: [commentId, threadId],
+        };
+        const result = await this._pool.query(query);
+        if (!result.rows.length) {
+            throw new NotFoundError('Comment dalam thread ini Tidak tersedia');
         }
     }
 
@@ -39,15 +52,6 @@ class CommentRepositoryPostgres extends CommentRepository {
         const result = await this._pool.query(query);
         // pindah logic mapping ke use case buat ubah content
         return result.rows;
-    }
-
-    async getCommentById(commentId) {
-        const query = {
-            text: 'SELECT * FROM comments WHERE id = $1',
-            values: [commentId],
-        };
-        const result = await this._pool.query(query);
-        return new CommentData({ ...result.rows[0] });
     }
 
     async deleteComment(commentId) {

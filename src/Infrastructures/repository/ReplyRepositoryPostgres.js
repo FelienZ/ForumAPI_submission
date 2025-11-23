@@ -1,3 +1,4 @@
+const AuthorizationError = require('../../Commons/exceptions/AuthorizationError');
 const NotFoundError = require('../../Commons/exceptions/NotFoundError');
 const ReplyData = require('../../Domains/replies/entities/ReplyData');
 const ReplyRepository = require('../../Domains/replies/ReplyRepository');
@@ -20,10 +21,10 @@ class ReplyRepositoryPostgres extends ReplyRepository {
         return new ReplyData({ ...result.rows[0] });
     }
 
-    async verifyReplyExist(replyId) {
+    async verifyReplyExist(commentId, replyId) {
         const checkQuery = {
-            text: 'SELECT id FROM replies WHERE id = $1',
-            values: [replyId],
+            text: 'SELECT id FROM replies WHERE id = $1 AND comment_id = $2',
+            values: [replyId, commentId],
         };
         const checkResult = await this._pool.query(checkQuery);
         if (!checkResult.rows.length) {
@@ -31,13 +32,15 @@ class ReplyRepositoryPostgres extends ReplyRepository {
         }
     }
 
-    async getReplyById(replyId) {
+    async verifyReplyOwner(replyId, userId) {
         const query = {
-            text: 'SELECT * FROM replies WHERE id = $1',
-            values: [replyId],
+            text: 'SELECT id FROM replies where id = $1 AND owner = $2',
+            values: [replyId, userId],
         };
         const result = await this._pool.query(query);
-        return new ReplyData({ ...result.rows[0] });
+        if (!result.rows.length) {
+            throw new AuthorizationError('Tidak Berhak Melakukan aksi ini');
+        }
     }
 
     async getRepliesByCommentId(commentId) {

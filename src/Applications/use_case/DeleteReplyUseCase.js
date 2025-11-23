@@ -1,6 +1,3 @@
-const AuthorizationError = require('../../Commons/exceptions/AuthorizationError');
-const NotFoundError = require('../../Commons/exceptions/NotFoundError');
-
 class DeleteReplyUseCase {
     constructor({ replyRepository, commentRepository, threadRepository }) {
         this._replyRepository = replyRepository;
@@ -13,16 +10,11 @@ class DeleteReplyUseCase {
             threadId, commentId, replyId, userId,
         } = useCasePayload;
         await this._threadRepository.verifyThreadExist(threadId);
-        await this._commentRepository.verifyCommentExist(commentId);
-        await this._replyRepository.verifyReplyExist(replyId);
-        const reply = await this._replyRepository.getReplyById(replyId);
-        if (reply.owner !== userId) {
-            throw new AuthorizationError('Tidak Berhak menghapus reply');
-        }
-        // cover unmatch reply -> comment
-        if (reply.commentId !== commentId) {
-            throw new NotFoundError('reply tidak ditemukan pada comment');
-        }
+        await this._commentRepository.verifyCommentExist(threadId, commentId);
+        // pindah cover unmatch reply - comment ke sini:
+        await this._replyRepository.verifyReplyExist(commentId, replyId);
+        // pindah validasi otorisasi ke sini:
+        await this._replyRepository.verifyReplyOwner(replyId, userId);
         await this._replyRepository.deleteReply(replyId);
     }
 }

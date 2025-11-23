@@ -1,6 +1,7 @@
 const CommentTableTestHelper = require('../../../../tests/CommentTableTestHelper');
 const ThreadTableTestHelper = require('../../../../tests/ThreadTableTestHelper');
 const UsersTableTestHelper = require('../../../../tests/UsersTableTestHelper');
+const AuthorizationError = require('../../../Commons/exceptions/AuthorizationError');
 const NotFoundError = require('../../../Commons/exceptions/NotFoundError');
 const NewComment = require('../../../Domains/comments/entities/NewComment');
 const NewThread = require('../../../Domains/threads/entities/NewThread');
@@ -121,8 +122,8 @@ describe('Comment Repository Postgres', () => {
             });
         });
     });
-    describe('verifyCommentExist', () => {
-        it('should return 404 if comment isnt exist', async () => {
+    describe('verifyCommentOwner', () => {
+        it('should return 403 unauth if client isnt comment owner', async () => {
             // Arrange
             await UsersTableTestHelper.addUser({ id: 'user-123', username: 'dicoding' });
             await UsersTableTestHelper.addUser({ id: 'user-456', username: 'dicoding-student' });
@@ -135,7 +136,39 @@ describe('Comment Repository Postgres', () => {
             // Action & assert
             await threadRepo.addThread(threadData);
             await commentRepo.addComment(commentData);
-            await expect(commentRepo.verifyCommentExist('comment-xyz')).rejects.toThrowError(NotFoundError);
+            await expect(commentRepo.verifyCommentOwner('comment-123', 'user-990')).rejects.toThrowError(AuthorizationError);
+        });
+        it('should not return 403 unauth if client is comment owner', async () => {
+            // Arrange
+            await UsersTableTestHelper.addUser({ id: 'user-123', username: 'dicoding' });
+            await UsersTableTestHelper.addUser({ id: 'user-456', username: 'dicoding-student' });
+            const threadData = new NewThread({ title: 'judul', body: 'isi', owner: 'user-123' });
+            const fakeIdGenerator = () => '123';
+            const threadRepo = new ThreadRepositoryPostgres(pool, fakeIdGenerator);
+            const commentData = new NewComment({ threadId: 'thread-123', content: 'ini content comment', owner: 'user-456' });
+            const commentRepo = new CommentRepositoryPostgres(pool, fakeIdGenerator);
+
+            // Action & assert
+            await threadRepo.addThread(threadData);
+            await commentRepo.addComment(commentData);
+            await expect(commentRepo.verifyCommentOwner('comment-123', 'user-456')).resolves.not.toThrowError(NotFoundError);
+        });
+    });
+    describe('verifyCommentExist', () => {
+        it('should return 404 if comment isnt exist or unmatch threadId stored with requested', async () => {
+            // Arrange
+            await UsersTableTestHelper.addUser({ id: 'user-123', username: 'dicoding' });
+            await UsersTableTestHelper.addUser({ id: 'user-456', username: 'dicoding-student' });
+            const threadData = new NewThread({ title: 'judul', body: 'isi', owner: 'user-123' });
+            const fakeIdGenerator = () => '123';
+            const threadRepo = new ThreadRepositoryPostgres(pool, fakeIdGenerator);
+            const commentData = new NewComment({ threadId: 'thread-123', content: 'ini content comment', owner: 'user-456' });
+            const commentRepo = new CommentRepositoryPostgres(pool, fakeIdGenerator);
+
+            // Action & assert
+            await threadRepo.addThread(threadData);
+            await commentRepo.addComment(commentData);
+            await expect(commentRepo.verifyCommentExist('thread-xyz', 'comment-xyz')).rejects.toThrowError(NotFoundError);
         });
         it('should not return 404 if comment exist', async () => {
             // Arrange
@@ -150,7 +183,7 @@ describe('Comment Repository Postgres', () => {
             // Action & assert
             await threadRepo.addThread(threadData);
             await commentRepo.addComment(commentData);
-            await expect(commentRepo.verifyCommentExist('comment-123')).resolves.not.toThrowError(NotFoundError);
+            await expect(commentRepo.verifyCommentExist('thread-123', 'comment-123')).resolves.not.toThrowError(NotFoundError);
         });
     });
 });
