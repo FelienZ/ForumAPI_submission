@@ -25,7 +25,7 @@ const ReplyTableTestHelper = {
         };
 
         const result = await pool.query(query);
-        return result.rows;
+        return result.rows[0];
     },
     async cleanTable() {
         await pool.query('DELETE FROM replies WHERE 1=1');

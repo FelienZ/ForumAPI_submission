@@ -1,4 +1,4 @@
-// hasil join owner -> username
+// hasil join owner -> username (via getById)
 class ThreadDetail {
     constructor(payload) {
         this._verifyPayload(payload);

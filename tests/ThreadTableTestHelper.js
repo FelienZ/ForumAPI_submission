@@ -6,11 +6,10 @@ const ThreadTableTestHelper = {
         id, title, body, owner,
     }) {
         const query = {
-            text: 'INSERT INTO threads(id, title, body, owner) VALUES($1, $2, $3, $4) RETURNING id',
+            text: 'INSERT INTO threads(id, title, body, owner) VALUES($1, $2, $3, $4)',
             values: [id, title, body, owner],
         };
-        const result = await pool.query(query);
-        return result.rows[0];
+        await pool.query(query);
     },
     async findThreadsById(id) {
         const query = {

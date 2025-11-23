@@ -1,5 +1,7 @@
 const NotFoundError = require('../../../Commons/exceptions/NotFoundError');
 const CommentRepository = require('../../../Domains/comments/CommentRepository');
+const CommentData = require('../../../Domains/comments/entities/CommentData');
+const NewReply = require('../../../Domains/replies/entities/NewReply');
 const ReplyData = require('../../../Domains/replies/entities/ReplyData');
 const ReplyRepository = require('../../../Domains/replies/ReplyRepository');
 const ThreadRepository = require('../../../Domains/threads/ThreadRepository');
@@ -10,14 +12,28 @@ describe('Add Reply Use Case', () => {
         // Arrange
         const useCasePayload = {
             threadId: 'thread-123',
-            content: 'ini konten',
-            userId: 'user-123',
+            content: 'sebuah balasan komen',
+            owner: 'user-123',
             commentId: 'comment-123',
         };
 
-        const mockReplyData = new ReplyData({
+        const mockAddedReply = new ReplyData({
             id: 'reply-123',
             content: useCasePayload.content,
+            is_delete: false,
+            date: '20 Nov',
+            comment_id: useCasePayload.commentId,
+            owner: useCasePayload.owner,
+        });
+
+        // untuk representasi data komen via getById
+        const mockCommentData = new CommentData({
+            id: 'comment-123',
+            content: 'sebuah komen',
+            thread_id: 'thread-123',
+            is_delete: false,
+            owner: 'user-123',
+            date: '20 November',
         });
 
         // depedency
@@ -26,20 +42,14 @@ describe('Add Reply Use Case', () => {
         const mockThreadRepository = new ThreadRepository();
 
         // mock method used
-        mockThreadRepository.getThreadById = jest.fn()
-            .mockImplementation(() => Promise.resolve({
-                id: useCasePayload.commentId,
-                owner: useCasePayload.userId,
-                threadId: 'thread-123',
-            }));
+        mockThreadRepository.verifyThreadExist = jest.fn()
+            .mockImplementation(() => Promise.resolve());
+        mockCommentRepository.verifyCommentExist = jest.fn()
+            .mockImplementation(() => Promise.resolve());
         mockCommentRepository.getCommentById = jest.fn()
-            .mockImplementation(() => Promise.resolve({
-                id: useCasePayload.commentId,
-                owner: useCasePayload.userId,
-                threadId: 'thread-123',
-            }));
+            .mockImplementation(() => Promise.resolve(mockCommentData));
         mockReplyRepository.addReply = jest.fn()
-            .mockImplementation(() => Promise.resolve(mockReplyData));
+            .mockImplementation(() => Promise.resolve(mockAddedReply));
 
         // create use case instance
         const addReplyUseCase = new AddReplyUseCase({
@@ -49,26 +59,52 @@ describe('Add Reply Use Case', () => {
         });
 
         // Action
-        const addReply = await addReplyUseCase.execute(useCasePayload);
+        const addedReply = await addReplyUseCase.execute(useCasePayload);
 
         // Assert
-        expect(addReply).toEqual(new ReplyData({
+        expect(addedReply).toStrictEqual(new ReplyData({
+            ...useCasePayload,
             id: 'reply-123',
+            is_delete: false,
+            date: '20 Nov',
+            comment_id: useCasePayload.commentId,
+        }));
+        expect(mockThreadRepository.verifyThreadExist).toBeCalledWith(useCasePayload.threadId);
+        expect(mockCommentRepository.verifyCommentExist).toBeCalledWith(useCasePayload.commentId);
+        expect(mockCommentRepository.getCommentById).toBeCalledWith(useCasePayload.commentId);
+        expect(mockReplyRepository.addReply).toBeCalledWith(new NewReply({
             content: useCasePayload.content,
+            owner: useCasePayload.owner,
+            threadId: useCasePayload.threadId,
+            commentId: useCasePayload.commentId,
         }));
     });
-    it('Should throw Not Found Error if Comment isnt exist', async () => {
+    it('should throw not found error if threadId data not match with getCommentById return data', async () => {
         // Arrange
         const useCasePayload = {
-            threadId: 'thread-123',
-            content: 'ini konten',
-            userId: 'user-123',
+            threadId: 'thread-xyz',
+            content: 'sebuah balasan komen',
+            owner: 'user-123',
             commentId: 'comment-123',
         };
 
-        const mockReplyData = new ReplyData({
+        const mockAddedReply = new ReplyData({
             id: 'reply-123',
             content: useCasePayload.content,
+            is_delete: false,
+            date: '20 Nov',
+            comment_id: useCasePayload.commentId,
+            owner: useCasePayload.owner,
+        });
+
+        // untuk representasi data komen via getById (unmatch case threadId)
+        const mockCommentData = new CommentData({
+            id: 'comment-123',
+            content: 'sebuah komen',
+            thread_id: 'thread-123',
+            is_delete: false,
+            owner: 'user-123',
+            date: '20 November',
         });
 
         // depedency
@@ -77,16 +113,16 @@ describe('Add Reply Use Case', () => {
         const mockThreadRepository = new ThreadRepository();
 
         // mock method used
-        mockThreadRepository.getThreadById = jest.fn()
-            .mockImplementation(() => Promise.resolve(useCasePayload.threadId));
+        mockThreadRepository.verifyThreadExist = jest.fn()
+            .mockImplementation(() => Promise.resolve());
+        mockCommentRepository.verifyCommentExist = jest.fn()
+            .mockImplementation(() => Promise.resolve());
+        /* misal, didapat comment dengan thread id xyz, tapi ingin add ke komen
+            yang sama tapi threadIdnya unmatch () */
         mockCommentRepository.getCommentById = jest.fn()
-            .mockImplementation(() => Promise.resolve({
-                id: useCasePayload.commentId,
-                owner: useCasePayload.userId,
-                threadId: 'thread-456',
-            }));
+            .mockImplementation(() => Promise.resolve(mockCommentData));
         mockReplyRepository.addReply = jest.fn()
-            .mockImplementation(() => Promise.resolve(mockReplyData));
+            .mockImplementation(() => Promise.resolve(mockAddedReply));
 
         // create use case instance
         const addReplyUseCase = new AddReplyUseCase({
@@ -95,7 +131,10 @@ describe('Add Reply Use Case', () => {
             commentRepository: mockCommentRepository,
         });
 
-        // Action & Assert
+        // Act & assert
         await expect(addReplyUseCase.execute(useCasePayload)).rejects.toThrowError(NotFoundError);
+        expect(mockThreadRepository.verifyThreadExist).toBeCalledWith(useCasePayload.threadId);
+        expect(mockCommentRepository.verifyCommentExist).toBeCalledWith(useCasePayload.commentId);
+        expect(mockCommentRepository.getCommentById).toBeCalledWith(useCasePayload.commentId);
     });
 });

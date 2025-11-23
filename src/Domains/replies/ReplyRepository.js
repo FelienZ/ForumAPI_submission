@@ -8,6 +8,10 @@ class ReplyRepository {
         throw new Error('REPLY_REPOSITORY.METHOD_NOT_IMPLEMENTED');
     }
 
+    async verifyReplyExist(replyId) {
+        throw new Error('REPLY_REPOSITORY.METHOD_NOT_IMPLEMENTED');
+    }
+
     async getReplyById(commentId) {
         throw new Error('REPLY_REPOSITORY.METHOD_NOT_IMPLEMENTED');
     }

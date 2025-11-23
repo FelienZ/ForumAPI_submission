@@ -3,11 +3,12 @@ const ThreadDetail = require('../ThreadDetail');
 describe('Thread Detail entities', () => {
     it('should throw error when payload did not contain needed property', () => {
     // Arrange
+        // miss username, date
         const payload = {
             id: '123',
             title: 'abc',
             body: 'abc',
-            // username
+            owner: 'user-123',
         };
 
         // Action and Assert
@@ -21,6 +22,7 @@ describe('Thread Detail entities', () => {
             body: 'abc',
             title: 'abc',
             username: 'abc',
+            date: 2025,
         };
 
         // Action and Assert
@@ -34,15 +36,17 @@ describe('Thread Detail entities', () => {
             title: 'title payload',
             body: 'body payload',
             username: 'username payload',
+            date: '20 November 2025',
         };
 
         // Action
         const {
-            id, title, body, username,
+            id, title, body, username, date,
         } = new ThreadDetail(payload);
 
         // Assert
         expect(id).toEqual(payload.id);
+        expect(date).toEqual(payload.date);
         expect(title).toEqual(payload.title);
         expect(body).toEqual(payload.body);
         expect(username).toEqual(payload.username);

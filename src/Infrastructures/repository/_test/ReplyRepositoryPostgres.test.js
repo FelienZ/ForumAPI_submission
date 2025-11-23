@@ -3,9 +3,9 @@ const ReplyTableTestHelper = require('../../../../tests/ReplyTableTestHelper');
 const ThreadTableTestHelper = require('../../../../tests/ThreadTableTestHelper');
 const UsersTableTestHelper = require('../../../../tests/UsersTableTestHelper');
 const NotFoundError = require('../../../Commons/exceptions/NotFoundError');
-const CommentData = require('../../../Domains/comments/entities/CommentData');
-const ReplyData = require('../../../Domains/replies/entities/ReplyData');
-const ThreadData = require('../../../Domains/threads/entities/ThreadData');
+const NewComment = require('../../../Domains/comments/entities/NewComment');
+const NewReply = require('../../../Domains/replies/entities/NewReply');
+const NewThread = require('../../../Domains/threads/entities/NewThread');
 const pool = require('../../database/postgres/pool');
 const CommentRepositoryPostgres = require('../CommentRepositoryPostgres');
 const ReplyRepositoryPostgres = require('../ReplyRepositoryPostgres');
@@ -26,42 +26,31 @@ describe('Reply Repository Postgres', () => {
             // Arrange
             await UsersTableTestHelper.addUser({ id: 'user-123', username: 'dicoding' });
             await UsersTableTestHelper.addUser({ id: 'user-456', username: 'dicoding-student' });
-            const threadData = new ThreadData({ title: 'judul thread', body: 'body thread', owner: 'user-123' });
+            const threadData = new NewThread({ title: 'judul thread', body: 'body thread', owner: 'user-123' });
             const fakeIdGenerator = () => '123';
             const threadRepo = new ThreadRepositoryPostgres(pool, fakeIdGenerator);
-            const commentData = new CommentData({ threadId: 'thread-123', content: 'ini content comment', owner: 'user-456' });
+            const commentData = new NewComment({ threadId: 'thread-123', content: 'ini content comment', owner: 'user-456' });
             const commentRepo = new CommentRepositoryPostgres(pool, fakeIdGenerator);
-            const replyData = new ReplyData({ commentId: 'comment-123', content: 'ini balasan comment', owner: 'user-123' });
+            const replyData = new NewReply({
+                threadId: 'thread-123', commentId: 'comment-123', content: 'ini balasan comment', owner: 'user-123',
+            });
             const replyRepo = new ReplyRepositoryPostgres(pool, fakeIdGenerator);
 
             // Action
             await threadRepo.addThread(threadData);
             await commentRepo.addComment(commentData);
-            const addedReply = await replyRepo.addReply(replyData);
+            await replyRepo.addReply(replyData);
+
             // Assert
             const reply = await ReplyTableTestHelper.findReplyById('reply-123');
-            expect(reply).toHaveLength(1);
-            expect(addedReply).toBeInstanceOf(ReplyData);
-            expect(addedReply.id).toEqual('reply-123');
-            expect(addedReply.content).toEqual('ini balasan comment');
-            expect(addedReply.owner).toEqual('user-123');
-        });
-
-        it('should throw NotFoundError when comment is not found', async () => {
-            // Arrange
-            await UsersTableTestHelper.addUser({ id: 'user-123', username: 'dicoding' });
-            await UsersTableTestHelper.addUser({ id: 'user-456', username: 'dicoding-student' });
-            const threadData = new ThreadData({ title: 'judul thread', body: 'body thread', owner: 'user-123' });
-            const fakeIdGenerator = () => '123';
-            const threadRepo = new ThreadRepositoryPostgres(pool, fakeIdGenerator);
-            // skip arrange instance comment
-            const replyData = new ReplyData({ commentId: 'comment-123', content: 'ini balasan comment', owner: 'user-123' });
-            const replyRepo = new ReplyRepositoryPostgres(pool, fakeIdGenerator);
-
-            // Act & Assert
-            await threadRepo.addThread(threadData);
-            // await commentRepo.addComment(commentData);
-            await expect(replyRepo.addReply(replyData)).rejects.toThrow(NotFoundError);
+            expect(reply).toStrictEqual({
+                id: 'reply-123',
+                content: 'ini balasan comment',
+                comment_id: 'comment-123',
+                owner: 'user-123',
+                date: reply.date,
+                is_delete: reply.is_delete,
+            });
         });
     });
     describe('getRepliesByCommentId', () => {
@@ -69,103 +58,78 @@ describe('Reply Repository Postgres', () => {
             // Arrange
             await UsersTableTestHelper.addUser({ id: 'user-123', username: 'dicoding' });
             await UsersTableTestHelper.addUser({ id: 'user-456', username: 'dicoding-student' });
-            const threadData = new ThreadData({ title: 'judul thread', body: 'body thread', owner: 'user-123' });
+            const threadData = new NewThread({ title: 'judul thread', body: 'body thread', owner: 'user-123' });
             const fakeIdGenerator = () => '123';
             const threadRepo = new ThreadRepositoryPostgres(pool, fakeIdGenerator);
-            const commentData = new CommentData({ threadId: 'thread-123', content: 'ini content comment', owner: 'user-456' });
+            const commentData = new NewComment({ threadId: 'thread-123', content: 'ini content comment', owner: 'user-456' });
             const commentRepo = new CommentRepositoryPostgres(pool, fakeIdGenerator);
-            const replyData = new ReplyData({ commentId: 'comment-123', content: 'ini balasan comment', owner: 'user-123' });
+            const replyData = new NewReply({
+                threadId: 'thread-123', commentId: 'comment-123', content: 'ini balasan comment', owner: 'user-123',
+            });
             const replyRepo = new ReplyRepositoryPostgres(pool, fakeIdGenerator);
 
             // Action
             await threadRepo.addThread(threadData);
             await commentRepo.addComment(commentData);
-            const addedReply = await replyRepo.addReply(replyData);
+            await replyRepo.addReply(replyData);
 
             // Action & Assert
-            const replies = await replyRepo.getRepliesByCommentId('comment-123');
-            expect(addedReply).toBeInstanceOf(ReplyData);
-            expect(replies[0].id).toEqual('reply-123');
-            expect(replies[0].content).toEqual('ini balasan comment');
-            expect(replies[0].username).toEqual('dicoding');
-        });
-        it('should return string **balasan telah dihapus** after deleted', async () => {
-        // Arrange
-            await UsersTableTestHelper.addUser({ id: 'user-123', username: 'dicoding' });
-            await UsersTableTestHelper.addUser({ id: 'user-456', username: 'dicoding-student' });
-            const threadData = new ThreadData({ title: 'judul thread', body: 'body thread', owner: 'user-123' });
-            const fakeIdGenerator = () => '123';
-            const threadRepo = new ThreadRepositoryPostgres(pool, fakeIdGenerator);
-            const commentData = new CommentData({ threadId: 'thread-123', content: 'ini content comment', owner: 'user-456' });
-            const commentRepo = new CommentRepositoryPostgres(pool, fakeIdGenerator);
-            const replyData = new ReplyData({ commentId: 'comment-123', content: 'ini balasan comment', owner: 'user-123' });
-            const replyRepo = new ReplyRepositoryPostgres(pool, fakeIdGenerator);
-
-            // Action
-            await threadRepo.addThread(threadData);
-            await commentRepo.addComment(commentData);
-            const addedReply = await replyRepo.addReply(replyData);
-            await replyRepo.deleteReply('reply-123');
-
-            // Assert
-            const reply = await replyRepo.getRepliesByCommentId('comment-123');
-            expect(addedReply).toBeInstanceOf(ReplyData);
-            expect(reply[0].content).toEqual('**balasan telah dihapus**');
+            const replies = await ReplyTableTestHelper.findRepliesByCommentId('comment-123');
+            expect(replies[0]).toStrictEqual({
+                id: 'reply-123',
+                content: 'ini balasan comment',
+                comment_id: 'comment-123',
+                owner: 'user-123',
+                date: replies[0].date,
+                is_delete: replies[0].is_delete,
+            });
         });
     });
     describe('getReplyById', () => {
-        it('Should return Not Found Error if Reply isnt exist', async () => {
-        // Arrange
-            const fakeIdGenerator = () => '123';
-            const replyRepo = new ReplyRepositoryPostgres(pool, fakeIdGenerator);
-            // skip add
-            // Action & Assert
-            await expect(replyRepo.getReplyById('reply-123')).rejects.toThrow(NotFoundError);
-        });
         it('Should return Reply Data if Reply Exist', async () => {
             // Arrange
             await UsersTableTestHelper.addUser({ id: 'user-123', username: 'dicoding' });
             await UsersTableTestHelper.addUser({ id: 'user-456', username: 'dicoding-student' });
-            const threadData = new ThreadData({ title: 'judul thread', body: 'body thread', owner: 'user-123' });
+            const threadData = new NewThread({ title: 'judul thread', body: 'body thread', owner: 'user-123' });
             const fakeIdGenerator = () => '123';
             const threadRepo = new ThreadRepositoryPostgres(pool, fakeIdGenerator);
-            const commentData = new CommentData({ threadId: 'thread-123', content: 'ini content comment', owner: 'user-456' });
+            const commentData = new NewComment({ threadId: 'thread-123', content: 'ini content comment', owner: 'user-456' });
             const commentRepo = new CommentRepositoryPostgres(pool, fakeIdGenerator);
-            const replyData = new ReplyData({ commentId: 'comment-123', content: 'ini balasan comment', owner: 'user-123' });
+            const replyData = new NewReply({
+                threadId: 'thread-123', commentId: 'comment-123', content: 'ini balasan comment', owner: 'user-123',
+            });
             const replyRepo = new ReplyRepositoryPostgres(pool, fakeIdGenerator);
 
             // Action
             await threadRepo.addThread(threadData);
             await commentRepo.addComment(commentData);
-            const addedReply = await replyRepo.addReply(replyData);
-            const reply = await replyRepo.getReplyById('reply-123');
+            await replyRepo.addReply(replyData);
 
-            // Assert
-            expect(addedReply).toBeInstanceOf(ReplyData);
-            expect(reply.id).toEqual('reply-123');
-            expect(reply.content).toEqual('ini balasan comment');
-            expect(reply.owner).toEqual('user-123');
+            // Action & Assert
+            const reply = await ReplyTableTestHelper.findReplyById('reply-123');
+            expect(reply).toStrictEqual({
+                id: 'reply-123',
+                content: 'ini balasan comment',
+                comment_id: 'comment-123',
+                owner: 'user-123',
+                date: reply.date,
+                is_delete: reply.is_delete,
+            });
         });
     });
     describe('deleteReply', () => {
-        it('Should return not found error if reply isnt exist', async () => {
-        // Arrange
-            const fakeIdGenerator = () => '123';
-            const replyRepo = new ReplyRepositoryPostgres(pool, fakeIdGenerator);
-
-            // Action & Assert
-            await expect(replyRepo.deleteReply('reply-123')).rejects.toThrow(NotFoundError);
-        });
         it('should delete match reply data', async () => {
             // Arrange
             await UsersTableTestHelper.addUser({ id: 'user-123', username: 'dicoding' });
             await UsersTableTestHelper.addUser({ id: 'user-456', username: 'dicoding-student' });
-            const threadData = new ThreadData({ title: 'judul thread', body: 'body thread', owner: 'user-123' });
+            const threadData = new NewThread({ title: 'judul thread', body: 'body thread', owner: 'user-123' });
             const fakeIdGenerator = () => '123';
             const threadRepo = new ThreadRepositoryPostgres(pool, fakeIdGenerator);
-            const commentData = new CommentData({ threadId: 'thread-123', content: 'ini content comment', owner: 'user-456' });
+            const commentData = new NewComment({ threadId: 'thread-123', content: 'ini content comment', owner: 'user-456' });
             const commentRepo = new CommentRepositoryPostgres(pool, fakeIdGenerator);
-            const replyData = new ReplyData({ commentId: 'comment-123', content: 'ini balasan comment', owner: 'user-123' });
+            const replyData = new NewReply({
+                threadId: 'thread-123', commentId: 'comment-123', content: 'ini balasan comment', owner: 'user-123',
+            });
             const replyRepo = new ReplyRepositoryPostgres(pool, fakeIdGenerator);
 
             // Action
@@ -176,7 +140,57 @@ describe('Reply Repository Postgres', () => {
 
             // Action & assert
             const result = await ReplyTableTestHelper.findReplyById('reply-123');
-            expect(result[0]).toMatchObject({ is_delete: true });
+            expect(result.is_delete).toEqual(true);
+            expect(result).toStrictEqual({
+                id: 'reply-123',
+                content: 'ini balasan comment',
+                comment_id: 'comment-123',
+                owner: 'user-123',
+                date: result.date,
+                is_delete: result.is_delete,
+            });
+        });
+    });
+    describe('verifyReplyExist', () => {
+        it('should return 404 if reply isnt exist', async () => {
+            // Arrange
+            await UsersTableTestHelper.addUser({ id: 'user-123', username: 'dicoding' });
+            await UsersTableTestHelper.addUser({ id: 'user-456', username: 'dicoding-student' });
+            const threadData = new NewThread({ title: 'judul thread', body: 'body thread', owner: 'user-123' });
+            const fakeIdGenerator = () => '123';
+            const threadRepo = new ThreadRepositoryPostgres(pool, fakeIdGenerator);
+            const commentData = new NewComment({ threadId: 'thread-123', content: 'ini content comment', owner: 'user-456' });
+            const commentRepo = new CommentRepositoryPostgres(pool, fakeIdGenerator);
+            const replyData = new NewReply({
+                threadId: 'thread-123', commentId: 'comment-123', content: 'ini balasan comment', owner: 'user-123',
+            });
+            const replyRepo = new ReplyRepositoryPostgres(pool, fakeIdGenerator);
+
+            // Action
+            await threadRepo.addThread(threadData);
+            await commentRepo.addComment(commentData);
+            await replyRepo.addReply(replyData);
+            await expect(replyRepo.verifyReplyExist('reply-xyz')).rejects.toThrowError(NotFoundError);
+        });
+        it('should not return 404 if reply exist', async () => {
+            // Arrange
+            await UsersTableTestHelper.addUser({ id: 'user-123', username: 'dicoding' });
+            await UsersTableTestHelper.addUser({ id: 'user-456', username: 'dicoding-student' });
+            const threadData = new NewThread({ title: 'judul thread', body: 'body thread', owner: 'user-123' });
+            const fakeIdGenerator = () => '123';
+            const threadRepo = new ThreadRepositoryPostgres(pool, fakeIdGenerator);
+            const commentData = new NewComment({ threadId: 'thread-123', content: 'ini content comment', owner: 'user-456' });
+            const commentRepo = new CommentRepositoryPostgres(pool, fakeIdGenerator);
+            const replyData = new NewReply({
+                threadId: 'thread-123', commentId: 'comment-123', content: 'ini balasan comment', owner: 'user-123',
+            });
+            const replyRepo = new ReplyRepositoryPostgres(pool, fakeIdGenerator);
+
+            // Action
+            await threadRepo.addThread(threadData);
+            await commentRepo.addComment(commentData);
+            await replyRepo.addReply(replyData);
+            await expect(replyRepo.verifyReplyExist('reply-123')).resolves.not.toThrowError(NotFoundError);
         });
     });
 });

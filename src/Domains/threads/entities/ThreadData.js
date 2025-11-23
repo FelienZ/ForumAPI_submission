@@ -1,3 +1,4 @@
+// thread data buat return hasil add (sebelum join via getById)
 class ThreadData {
     constructor(payload) {
         this._verifyPayload(payload);
