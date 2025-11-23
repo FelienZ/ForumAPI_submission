@@ -37,9 +37,6 @@ class ReplyRepositoryPostgres extends ReplyRepository {
             values: [replyId],
         };
         const result = await this._pool.query(query);
-        if (!result.rows.length) {
-            throw new NotFoundError('Reply Tidak ditemukan');
-        }
         return new ReplyData({ ...result.rows[0] });
     }
 
