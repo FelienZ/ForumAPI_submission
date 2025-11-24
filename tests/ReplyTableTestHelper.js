@@ -2,10 +2,12 @@ const pool = require('../src/Infrastructures/database/postgres/pool');
 
 /* istanbul ignore file */
 const ReplyTableTestHelper = {
-    async addReply({ id, content, owner }) {
+    async addReply({
+        id, content, owner, commentId,
+    }) {
         const query = {
-            text: 'INSERT INTO replies(id, content, owner) VALUES($1, $2, $3)',
-            values: [id, content, owner],
+            text: 'INSERT INTO replies(id, content, owner, comment_id) VALUES($1, $2, $3, $4)',
+            values: [id, content, owner, commentId],
         };
         await pool.query(query);
     },
