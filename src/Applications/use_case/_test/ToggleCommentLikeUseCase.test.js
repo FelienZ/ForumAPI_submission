@@ -45,9 +45,9 @@ describe('Add Like in Comment Use Case', () => {
             .toBeCalledWith(data.threadId, data.commentId);
         expect(mockLikeCommentRepository.isLiked)
             .toBeCalledWith(data.commentId, data.userId);
-        // karena return isLiked = true, maka addLike nggak ditoggle (case fail, set called)
+        // karena return isLiked = true, maka addLike nggak ditoggle
         expect(mockLikeCommentRepository.addLike)
-            .toBeCalledWith(data.commentId, data.userId);
+            .not.toBeCalled();
         expect(mockLikeCommentRepository.deleteLike)
             .toBeCalledWith(data.commentId, data.userId);
     });

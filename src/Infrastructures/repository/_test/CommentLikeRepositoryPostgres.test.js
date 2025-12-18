@@ -81,9 +81,9 @@ describe('Reply Repository Postgres', () => {
                 id: 'comment-123', threadId: 'thread-123', content: 'ini content comment', owner: 'user-456',
             });
 
-            // default false krn blm dilike (case fail, set true)
+            // default false krn blm dilike
             const isLiked = await commentLikeRepo.isLiked('comment-123', 'user-123');
-            expect(isLiked).toEqual(true);
+            expect(isLiked).toEqual(false);
             // jika dilike baru true
             await commentLikeRepo.addLike('comment-123', 'user-123');
             const findData = await CommentLikeTableTestHelper.findDataByCommentIdAndUserId('comment-123', 'user-123');
@@ -127,8 +127,7 @@ describe('Reply Repository Postgres', () => {
             expect(count).toEqual(2);
             await commentLikeRepo.deleteLike('comment-123', 'user-123');
             const count2 = await commentLikeRepo.getLikesCountByCommentId('comment-123');
-            // case salah, karena udah delete sekali
-            expect(count2).toEqual(2);
+            expect(count2).toEqual(1);
         });
     });
 });
