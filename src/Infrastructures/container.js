@@ -35,6 +35,9 @@ const AddReplyUseCase = require('../Applications/use_case/AddReplyUseCase');
 const ReplyRepository = require('../Domains/replies/ReplyRepository');
 const ReplyRepositoryPostgres = require('./repository/ReplyRepositoryPostgres');
 const DeleteReplyUseCase = require('../Applications/use_case/DeleteReplyUseCase');
+const CommentLikesRepository = require('../Domains/commentlikes/CommentLikesRepository');
+const CommentLikesRepositoryPostgres = require('./repository/CommentLikesReposisitoryPostgres');
+const ToggleCommentLikeUseCase = require('../Applications/use_case/ToggleCommentLikeUseCase');
 
 // creating container
 const container = createContainer();
@@ -119,6 +122,20 @@ container.register([
     {
         key: ReplyRepository.name,
         Class: ReplyRepositoryPostgres,
+        parameter: {
+            dependencies: [
+                {
+                    concrete: pool,
+                },
+                {
+                    concrete: nanoid,
+                },
+            ],
+        },
+    },
+    {
+        key: CommentLikesRepository.name,
+        Class: CommentLikesRepositoryPostgres,
         parameter: {
             dependencies: [
                 {
@@ -254,6 +271,10 @@ container.register([
                     name: 'replyRepository',
                     internal: ReplyRepository.name,
                 },
+                {
+                    name: 'commentLikeRepository',
+                    internal: CommentLikesRepository.name,
+                },
             ],
         },
     },
@@ -304,6 +325,27 @@ container.register([
                 {
                     name: 'replyRepository',
                     internal: ReplyRepository.name,
+                },
+                {
+                    name: 'commentRepository',
+                    internal: CommentRepository.name,
+                },
+                {
+                    name: 'threadRepository',
+                    internal: ThreadRepository.name,
+                },
+            ],
+        },
+    },
+    {
+        key: ToggleCommentLikeUseCase.name,
+        Class: ToggleCommentLikeUseCase,
+        parameter: {
+            injectType: 'destructuring',
+            dependencies: [
+                {
+                    name: 'commentLikeRepository',
+                    internal: CommentLikesRepository.name,
                 },
                 {
                     name: 'commentRepository',

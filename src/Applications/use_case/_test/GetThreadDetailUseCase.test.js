@@ -1,3 +1,4 @@
+const CommentLikesRepository = require('../../../Domains/commentlikes/CommentLikesRepository');
 const CommentRepository = require('../../../Domains/comments/CommentRepository');
 const ReplyRepository = require('../../../Domains/replies/ReplyRepository');
 const ThreadRepository = require('../../../Domains/threads/ThreadRepository');
@@ -20,6 +21,7 @@ describe('Get Thread Detail Use Case', () => {
             is_delete: true,
             username: 'userY',
             date: '20 November',
+            likeCount: 0,
         }];
         // reply dalam array (via getByCommentId) -> misal balasan dihapus juga
         const mockReplyData = [{
@@ -34,6 +36,7 @@ describe('Get Thread Detail Use Case', () => {
         const mockThreadRepository = new ThreadRepository();
         const mockCommentRepository = new CommentRepository();
         const mockReplyRepository = new ReplyRepository();
+        const mockLikeCommentRepository = new CommentLikesRepository();
 
         // mock method used
         mockThreadRepository.getThreadById = jest.fn()
@@ -44,11 +47,15 @@ describe('Get Thread Detail Use Case', () => {
         mockReplyRepository.getRepliesByCommentId = jest.fn()
             .mockImplementation(() => Promise.resolve(mockReplyData));
 
+        mockLikeCommentRepository.getLikesCountByCommentId = jest.fn()
+            .mockImplementation(() => Promise.resolve());
+
         // create use case instance
         const getThreadDetailUseCase = new GetThreadDetailUseCase({
             threadRepository: mockThreadRepository,
             commentRepository: mockCommentRepository,
             replyRepository: mockReplyRepository,
+            commentLikeRepository: mockLikeCommentRepository,
         });
 
         // Action
@@ -58,6 +65,8 @@ describe('Get Thread Detail Use Case', () => {
         expect(mockThreadRepository.getThreadById).toBeCalledWith(mockThreadData.id);
         expect(mockCommentRepository.getCommentsByThreadId).toBeCalledWith(mockThreadData.id);
         expect(mockReplyRepository.getRepliesByCommentId).toBeCalledWith(mockCommentData[0].id);
+        expect(mockLikeCommentRepository.getLikesCountByCommentId)
+            .toBeCalledWith(mockCommentData[0].id);
         expect(getThreadDetail).toEqual({
             id: mockThreadData.id,
             title: 'sebuah thread',
@@ -71,6 +80,7 @@ describe('Get Thread Detail Use Case', () => {
                     username: 'userY',
                     is_delete: true,
                     date: '20 November',
+                    likeCount: 0,
                     replies: [
                         {
                             id: 'reply-123',

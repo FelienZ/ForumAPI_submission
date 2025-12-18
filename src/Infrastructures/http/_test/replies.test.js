@@ -1,4 +1,5 @@
 /* eslint-disable quotes */
+const CommentLikeTableTestHelper = require('../../../../tests/CommentLikeTableTestHelper');
 const CommentTableTestHelper = require('../../../../tests/CommentTableTestHelper');
 const ThreadTableTestHelper = require('../../../../tests/ThreadTableTestHelper');
 const UsersTableTestHelper = require('../../../../tests/UsersTableTestHelper');
@@ -12,6 +13,7 @@ describe('/threads/{threadId}/comments/{commentId}/replies endpoint', () => {
         await UsersTableTestHelper.cleanTable();
         await ThreadTableTestHelper.cleanTable();
         await CommentTableTestHelper.cleanTable();
+        await CommentLikeTableTestHelper.cleanTable();
     });
     afterAll(async () => {
         await pool.end();
@@ -62,6 +64,17 @@ describe('/threads/{threadId}/comments/{commentId}/replies endpoint', () => {
                     strategy: 'forumapi_jwt',
                 },
             });
+
+            // test inject like comment
+            await server.inject({
+                method: 'PUT',
+                url: `/threads/${threadId}/comments/${commentId}/likes`,
+                auth: {
+                    credentials: { id: 'user-998' },
+                    strategy: 'forumapi_jwt',
+                },
+            });
+
             const replyResponseJson = JSON.parse(createReply.payload);
             // cek threadDetail
             const response = await server.inject({
